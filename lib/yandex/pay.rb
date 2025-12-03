@@ -40,31 +40,6 @@ module Yandex
         )
       end
     end
-
-    # Yandex::Pay::PaymentForm
-    # Helper for building payment form URLs
-    class PaymentForm
-      # Build a payment form URL
-      # @param params [Hash] payment form parameters
-      # @example
-      #   {
-      #     merchant_id: 'your-merchant-id',
-      #     order_id: 'order-123',
-      #     amount: 1000,
-      #     currency: 'RUB',
-      #     description: 'Order description'
-      #   }
-      # @param environment [Symbol] :production or :sandbox
-      # @return [String] payment form URL
-      def self.build(params: {}, environment: :production)
-        base_url = environment == :sandbox ? 
-          'https://sandbox.pay.yandex.ru/web/checkout' : 
-          'https://pay.yandex.ru/web/checkout'
-        
-        query = Faraday::Utils.build_query(params)
-        "#{base_url}?#{query}"
-      end
-    end
   end
 end
 

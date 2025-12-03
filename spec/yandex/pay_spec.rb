@@ -164,20 +164,4 @@ RSpec.describe Yandex::Pay do
       end
     end
   end
-
-  describe Yandex::Pay::PaymentForm do
-    describe '.build' do
-      it 'builds payment form URL' do
-        url = described_class.build(params: { merchant_id: 'm1', order_id: 'o1' })
-        expect(url).to include('https://pay.yandex.ru/web/checkout')
-        expect(url).to include('merchant_id=m1')
-        expect(url).to include('order_id=o1')
-      end
-
-      it 'builds sandbox URL when environment is sandbox' do
-        url = described_class.build(params: { order_id: 'o1' }, environment: :sandbox)
-        expect(url).to include('https://sandbox.pay.yandex.ru/web/checkout')
-      end
-    end
-  end
 end
