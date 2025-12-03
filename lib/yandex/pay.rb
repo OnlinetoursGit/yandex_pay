@@ -30,7 +30,7 @@ module Yandex
       # @param host [String, nil] custom API host (optional, overrides environment)
       def initialize(api_key:, environment: :production, host: nil)
         actual_host = host || API_HOSTS[environment] || API_HOSTS[:production]
-        
+
         @client = Yandex::Pay::ApiClient.new(api_key: api_key, host: actual_host)
         @resources = OpenStruct.new(
           orders: Yandex::Pay::Order.new(client: @client),
