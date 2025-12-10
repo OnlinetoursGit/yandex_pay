@@ -6,6 +6,7 @@ require 'json'
 require 'yandex/pay/api_client'
 require 'yandex/pay/utils'
 require 'yandex/pay/notification'
+require 'yandex/pay/webhook_jwt_decoder'
 require 'yandex/pay/resource'
 require 'yandex/pay/version'
 
