@@ -111,10 +111,12 @@ RSpec.describe Yandex::Pay do
   describe Yandex::Pay::Notification do
     let(:notification_data) do
       {
-        'event' => 'ORDER_STATUS_UPDATED',
-        'payload' => {
-          'order_id' => 'order-123',
-          'status' => 'CAPTURED'
+        "event": "ORDER_STATUS_UPDATED",
+        "event_time": "2025-12-10T15:19:07.599093+00:00",
+        "merchant_id": "040d2366-16f3-4b8d-948c-0c27c5f4df31",
+        "order": {
+          "order_id": "order-123",
+          "payment_status": "CAPTURED"
         }
       }
     end
