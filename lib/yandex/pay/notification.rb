@@ -7,7 +7,7 @@ module Yandex
     # Yandex::Pay::Notification
     # Handles webhook notifications from Yandex Pay Merchant API
     #
-    # Supports both new webhook format (JWT-based) and legacy format for backward compatibility.
+    # Supports webhook format (JWT-based)
     #
     # @see https://pay.yandex.ru/docs/ru/custom/backend/merchant-api/webhook
     #
@@ -16,14 +16,8 @@ module Yandex
     #   notification.event_type # => "OPERATION_STATUS_UPDATED"
     #   notification.operation_type # => "CAPTURE"
     #   notification.success? # => true
-    #
-    # @example Legacy format (for backward compatibility)
-    #   notification = Yandex::Pay::Notification.new(data: legacy_params)
-    #   notification.success? # => true
     class Notification
       class UnsupportedTypeError < StandardError; end
-
-      DEFAULT_ALGORITHM = 'sha256'
 
       # Supported event types from Yandex Pay webhook
       SUPPORTED_EVENT_TYPES = %w[
@@ -51,7 +45,7 @@ module Yandex
       def initialize(data:)
         @raw_data = data
         @data = normalize_data(data)
-        validate_event_type! unless legacy_format?
+        validate_event_type!
       end
 
       # @return [String, nil] Event type: "ORDER_STATUS_UPDATED" or "OPERATION_STATUS_UPDATED"
@@ -158,8 +152,6 @@ module Yandex
 
       # @return [Boolean] true if the notification indicates success
       def success?
-        return legacy_success? if legacy_format?
-
         if operation_status_updated?
           operation_status == OPERATION_SUCCESS_STATUS
         elsif order_status_updated?
@@ -173,8 +165,6 @@ module Yandex
 
       # @return [Boolean] true if the notification indicates failure
       def failed?
-        return legacy_failed? if legacy_format?
-
         if operation_status_updated?
           operation_status == OPERATION_FAIL_STATUS
         elsif order_status_updated?
@@ -188,8 +178,6 @@ module Yandex
 
       # @return [Boolean] true if the notification indicates pending state
       def pending?
-        return legacy_pending? if legacy_format?
-
         if operation_status_updated?
           operation_status == OPERATION_PENDING_STATUS
         elsif order_status_updated?
@@ -210,88 +198,17 @@ module Yandex
       # Combined status accessor
       # @return [String, nil]
       def status
-        return @data[:status] if legacy_format?
-
         operation_status || payment_status || subscription_status
       end
-
-      # Validate webhook signature using HMAC
-      # @param secret_key [String] webhook secret key
-      # @param signature [String] signature from request header
-      # @return [Boolean]
-      def valid_signature?(secret_key:, signature:)
-        return false if signature.nil? || signature.empty?
-
-        expected_signature = compute_signature(secret_key)
-        secure_compare(signature, expected_signature)
-      end
-
-      # Alias for backward compatibility
-      alias valid? valid_signature?
 
       # @return [Hash] Full notification data
       def to_h
         @data
       end
 
-      # ========================================
-      # Legacy format compatibility methods
-      # These methods support old Sberbank-style notifications
-      # ========================================
-
-      # @return [Boolean] true if this is a legacy format notification
-      def legacy_format?
-        @data.key?(:checksum) || @data.key?(:md_order) || @data.key?(:authorize_id)
-      end
-
-      # Legacy operation field (approved, deposited, declinedByTimeout, etc.)
       # @return [String, nil]
       def operation
-        return @data[:operation] if legacy_format?
-
         operation_type&.downcase
-      end
-
-      # Legacy amount field (in kopecks)
-      # @return [String, nil]
-      def amount
-        @data[:amount]
-      end
-
-      # Legacy payment ID
-      # @return [String, nil]
-      def payment_id
-        @data[:payment_id]
-      end
-
-      # Legacy authorize ID
-      # @return [String, nil]
-      def authorize_id
-        @data[:authorize_id]
-      end
-
-      # Legacy capture ID
-      # @return [String, nil]
-      def capture_id
-        @data[:capture_id]
-      end
-
-      # Legacy refund ID
-      # @return [String, nil]
-      def refund_id
-        @data[:refund_id]
-      end
-
-      # Legacy cancel ID
-      # @return [String, nil]
-      def cancel_id
-        @data[:cancel_id]
-      end
-
-      # Legacy mdOrder field
-      # @return [String, nil]
-      def md_order
-        @data[:md_order]
       end
 
       private
@@ -302,43 +219,9 @@ module Yandex
       end
 
       def validate_event_type!
-        return if event_type.nil? # Allow nil for backward compatibility
-
         unless SUPPORTED_EVENT_TYPES.include?(event_type)
           raise UnsupportedTypeError, "Unsupported notification type: #{event_type}."
         end
-      end
-
-      # Legacy success check (old Sberbank format)
-      def legacy_success?
-        @data[:status].to_s == '1' && @data[:operation] != 'declinedByTimeout'
-      end
-
-      # Legacy failure check
-      def legacy_failed?
-        @data[:status].to_s == '0' || @data[:operation] == 'declinedByTimeout'
-      end
-
-      # Legacy pending check
-      def legacy_pending?
-        !legacy_success? && !legacy_failed?
-      end
-
-      def compute_signature(secret_key)
-        body = @raw_data.is_a?(String) ? @raw_data : JSON.fast_generate(@raw_data)
-        digest = OpenSSL::Digest.new(DEFAULT_ALGORITHM)
-        OpenSSL::HMAC.hexdigest(digest, secret_key, body)
-      end
-
-      # Constant-time string comparison to prevent timing attacks
-      def secure_compare(a, b)
-        return false if a.nil? || b.nil? || a.bytesize != b.bytesize
-
-        l = a.unpack("C*")
-        r = 0
-        i = -1
-        b.each_byte { |v| r |= v ^ l[i += 1] }
-        r == 0
       end
     end
   end

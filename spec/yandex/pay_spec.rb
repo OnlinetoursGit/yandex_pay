@@ -148,22 +148,5 @@ RSpec.describe Yandex::Pay do
         expect(notification.success?).to be true
       end
     end
-
-    describe '#valid?' do
-      it 'validates signature' do
-        notification = described_class.new(data: notification_data)
-        secret_key = 'test-secret'
-
-        body = JSON.fast_generate(notification_data)
-        expected_signature = OpenSSL::HMAC.hexdigest('sha256', secret_key, body)
-
-        expect(notification.valid?(secret_key: secret_key, signature: expected_signature)).to be true
-      end
-
-      it 'returns false for invalid signature' do
-        notification = described_class.new(data: notification_data)
-        expect(notification.valid?(secret_key: 'secret', signature: 'invalid')).to be false
-      end
-    end
   end
 end
